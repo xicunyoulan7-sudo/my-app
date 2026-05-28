@@ -1,0 +1,1171 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  X, Search, Image as ImageIcon, Filter, Plus, Calendar, 
+  Sparkles, RefreshCw, Shirt, Trash2, ChevronRight, Check,
+  Sun, Cloud, CloudRain, Briefcase, Heart, Smile, Thermometer, Info, UploadCloud, Umbrella,
+  MapPin, Coffee, GlassWater, Tent, Star
+} from 'lucide-react';
+
+// 初期クローゼットデータ (使いやすいようにカテゴリと季節を拡張)
+const initialCloset = [
+  { id: 1, url: 'https://images.unsplash.com/photo-1509319117193-57bab727e09d?auto=format&fit=crop&w=600&q=80', category: 'トップス', subCategory: 'シャツ', title: '白のリネンシャツ', season: '春秋', color: 'ホワイト' },
+  { id: 2, url: 'https://images.unsplash.com/photo-1594938298096-74dbb6eb3b81?auto=format&fit=crop&w=600&q=80', category: 'アウター', subCategory: 'ジャケット', title: 'テーラードジャケット', season: '春秋', color: 'ネイビー' },
+  { id: 3, url: 'https://images.unsplash.com/photo-1617114919297-3f82054ff46b?auto=format&fit=crop&w=600&q=80', category: 'アウター', subCategory: 'コート', title: 'チェスターコート', season: '冬', color: 'ブラウン' },
+  { id: 4, url: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?auto=format&fit=crop&w=600&q=80', category: 'ボトムス', subCategory: 'デニム', title: 'ストレートデニム', season: 'オールシーズン', color: 'ブルー' },
+  { id: 5, url: 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&w=600&q=80', category: 'ワンピース', subCategory: 'ドレス', title: 'エレガントワンピース', season: '夏', color: 'パープル' },
+  { id: 6, url: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=600&q=80', category: 'トップス', subCategory: 'シャツ', title: 'チェックネルシャツ', season: '秋冬', color: 'レッド' },
+  { id: 7, url: 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?auto=format&fit=crop&w=600&q=80', category: 'トップス', subCategory: 'ニット', title: 'ベージュケーブルニット', season: '冬', color: 'ベージュ' },
+  { id: 8, url: 'https://images.unsplash.com/photo-1520975954732-57dd06f0e47d?auto=format&fit=crop&w=600&q=80', category: 'ワンピース', subCategory: '和服', title: 'モダン浴衣', season: '夏', color: 'ネイビー' },
+  { id: 9, url: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=600&q=80', category: 'アウター', subCategory: 'レザージャケット', title: 'ライダースジャケット', season: '秋冬', color: 'ブラック' },
+  { id: 10, url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80', category: 'シューズ', subCategory: 'スニーカー', title: '赤のランニングシューズ', season: 'オールシーズン', color: 'レッド' },
+  { id: 11, url: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=600&q=80', category: 'シューズ', subCategory: 'スニーカー', title: '厚底ホワイトスニーカー', season: 'オールシーズン', color: 'ホワイト' },
+  { id: 12, url: 'https://images.unsplash.com/photo-1555689502-c4b22d76c56f?auto=format&fit=crop&w=600&q=80', category: 'ボトムス', subCategory: 'チノパン', title: 'ベージュチノパンツ', season: 'オールシーズン', color: 'ベージュ' },
+];
+
+const categories = ['すべて', 'トップス', 'ボトムス', 'アウター', 'ワンピース', 'シューズ'];
+const seasons = ['すべて', '春', '夏', '秋', '冬', 'オールシーズン'];
+
+// 地域の定義（ベース気温を設定）
+const regions = [
+  { id: 'sapporo', name: '札幌', baseTemp: 10 },
+  { id: 'tokyo', name: '東京', baseTemp: 20 },
+  { id: 'nagoya', name: '名古屋', baseTemp: 21 },
+  { id: 'osaka', name: '大阪', baseTemp: 22 },
+  { id: 'fukuoka', name: '福岡', baseTemp: 23 },
+  { id: 'naha', name: '那覇', baseTemp: 28 },
+];
+
+// 予定（スケジュール）とドレスコードの定義
+const scheduleOptions = [
+  { id: 'office', name: 'オフィス・仕事', style: 'オフィスカジュアル', icon: <Briefcase size={12} />, keywords: ['シャツ', 'ジャケット', 'スラックス', 'チノパン', 'ブラウス', 'テーラード', 'きれいめ'] },
+  { id: 'remote', name: 'リモートワーク', style: 'リラックス', icon: <Coffee size={12} />, keywords: ['ニット', 'カーディガン', 'スウェット', 'リラックス', 'Tシャツ', 'パーカー'] },
+  { id: 'date', name: 'デート・ディナー', style: 'きれいめ・フェミニン', icon: <Heart size={12} />, keywords: ['ワンピース', 'ドレス', 'コート', 'きれいめ', 'ブラウス', 'スカート'] },
+  { id: 'outing', name: 'お出かけ・カフェ', style: 'カジュアル・トレンド', icon: <Smile size={12} />, keywords: ['デニム', 'スニーカー', 'カジュアル', 'トレンド', 'Tシャツ', 'ニット'] },
+  { id: 'active', name: 'アウトドア・運動', style: 'アクティブ・スポーティ', icon: <Tent size={12} />, keywords: ['マウンテンパーカー', 'スニーカー', 'Tシャツ', 'ナイロン', 'ショートパンツ', 'ダウン'] },
+  { id: 'formal', name: 'パーティー・式典', style: 'フォーマル', icon: <Star size={12} />, keywords: ['ジャケット', 'ドレス', 'ローファー', 'フォーマル', 'スーツ', 'セットアップ'] },
+];
+
+// 新規登録用のUnsplashプレースホルダ画像リスト (自動登録をスムーズにするため)
+const placeholderImages = [
+  'https://images.unsplash.com/photo-1562157873-818bc0726f68?auto=format&fit=crop&w=600&q=80', // Tシャツ
+  'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=600&q=80', // シャツ
+  'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=600&q=80', // ジーンズ
+  'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&w=600&q=80', // スウェット
+  'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=600&q=80', // 白ニット
+  'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&w=600&q=80', // シューズ
+  'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80', // イエロードレス
+  'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=600&q=80', // 各種
+];
+
+const initialWeeks = [
+  { id: 'mon', name: '月曜日', weather: '晴れ', temp: '暖かめ(20℃)', schedule: 'オフィス・仕事', style: 'オフィスカジュアル', items: { tops: 1, bottoms: 12, outer: 2, shoes: 11 } },
+  { id: 'tue', name: '火曜日', weather: '曇り', temp: '肌寒い(15℃)', schedule: 'お出かけ・カフェ', style: 'カジュアル・トレンド', items: { tops: 6, bottoms: 4, outer: 9, shoes: 10 } },
+  { id: 'wed', name: '水曜日', weather: '雨', temp: '普通(18℃)', schedule: 'リモートワーク', style: 'リラックス', items: { tops: 7, bottoms: 4, outer: null, shoes: 11 } },
+  { id: 'thu', name: '木曜日', weather: '晴れ', temp: '暑い(28℃)', schedule: 'デート・ディナー', style: 'きれいめ・フェミニン', items: { tops: null, bottoms: null, outer: null, shoes: null } },
+  { id: 'fri', name: '金曜日', weather: '晴れ', temp: '普通(19℃)', schedule: 'パーティー・式典', style: 'フォーマル', items: { tops: null, bottoms: null, outer: null, shoes: null } },
+  { id: 'sat', name: '土曜日', weather: '曇り', temp: '暑い(27℃)', schedule: 'アウトドア・運動', style: 'アクティブ・スポーティ', items: { tops: null, bottoms: null, outer: null, shoes: null } },
+  { id: 'sun', name: '日曜日', weather: '晴れ', temp: '快適(22℃)', schedule: 'お出かけ・カフェ', style: 'カジュアル・トレンド', items: { tops: null, bottoms: null, outer: null, shoes: null } },
+];
+
+export default function App() {
+  // 状態管理
+  const [closet, setCloset] = useState(initialCloset);
+  const [weeks, setWeeks] = useState(initialWeeks);
+  
+  // フィルター・検索
+  const [activeTab, setActiveTab] = useState('weekly'); // 'weekly' or 'closet'
+  const [selectedCategory, setSelectedCategory] = useState('すべて');
+  const [selectedSeason, setSelectedSeason] = useState('すべて');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // 各種モーダル
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSlotSelectModalOpen, setIsSlotSelectModalOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState(null); // { dayId, itemType }
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // 新規追加フォーム
+  const [newTitle, setNewTitle] = useState('');
+  const [newCategory, setNewCategory] = useState('トップス');
+  const [newSeason, setNewSeason] = useState('オールシーズン');
+  const [newColor, setNewColor] = useState('ブラック');
+  const [newUrl, setNewUrl] = useState('');
+  const [imagePreview, setImagePreview] = useState(''); // 追加: 画像プレビュー用
+  const [isAnalyzing, setIsAnalyzing] = useState(false); // 追加: 画像解析中状態
+  const [formError, setFormError] = useState('');
+  const [trendAdvice, setTrendAdvice] = useState(''); // 追加: トレンドアドバイス用
+  const [selectedRegion, setSelectedRegion] = useState('tokyo'); // 追加: 選択された地域
+
+  // 初期コーディネート自動セット
+  useEffect(() => {
+    // 初期状態で空の部分を自動で埋める
+    handleAutoGenerate(true); // 初回はサイレントに生成
+  }, []);
+
+  // コーディネート自動提案ロジック (AI風)
+  const handleAutoGenerate = (isInitial = false) => {
+    if (!isInitial) {
+      setIsGenerating(true);
+    }
+    
+    // 現在の季節に応じたトレンド情報を取得
+    const currentMonth = new Date().getMonth() + 1;
+    let trend = {};
+    if (currentMonth >= 3 && currentMonth <= 5) {
+      trend = { season: '春', color: 'ピンク', keyword: 'シャツ', advice: '現在の季節は「春」です。春らしい「ピンク」や軽やかな「シャツ」を取り入れたスタイルがトレンドです！全体のトーンを明るくすると季節感が出ますよ。' };
+    } else if (currentMonth >= 6 && currentMonth <= 8) {
+      trend = { season: '夏', color: 'ブルー', keyword: 'リネン', advice: '現在の季節は「夏」です。暑い夏には涼しげな「ブルー」や「リネン」素材を取り入れた爽やかコーデがおすすめです。通気性の良いアイテムで快適に過ごしましょう。' };
+    } else if (currentMonth >= 9 && currentMonth <= 11) {
+      trend = { season: '秋', color: 'ブラウン', keyword: 'ニット', advice: '現在の季節は「秋」です。深みのある「ブラウン」や、温かみのある「ニット」を取り入れた落ち着いた着こなしが素敵です。レイヤード（重ね着）も楽しめる季節です。' };
+    } else {
+      trend = { season: '冬', color: 'ブラック', keyword: 'コート', advice: '現在の季節は「冬」です。シックな「ブラック」や、ボリュームのある「コート」を主役にしたスタイルが人気です。防寒対策とおしゃれを両立させましょう。' };
+    }
+    
+    setTimeout(() => {
+      setTrendAdvice(trend.advice);
+
+      const updatedWeeks = weeks.map(day => {
+        // 各カテゴリから適切な服を探す
+        const tops = closet.filter(item => item.category === 'トップス');
+        const bottoms = closet.filter(item => item.category === 'ボトムス');
+        const outers = closet.filter(item => item.category === 'アウター');
+        const shoes = closet.filter(item => item.category === 'シューズ');
+        const dresses = closet.filter(item => item.category === 'ワンピース');
+
+        let selectedTops = null;
+        let selectedBottoms = null;
+        let selectedOuter = null;
+        let selectedShoes = null;
+
+        // 気温の数値抽出と状態判定
+        const tempMatch = day.temp.match(/\d+/);
+        const tempNum = tempMatch ? parseInt(tempMatch[0]) : 20;
+        const isHot = day.temp.includes('暑い') || tempNum >= 25;
+        const isCold = day.temp.includes('肌寒い') || day.temp.includes('冬') || tempNum <= 16;
+        
+        // 天気の判定
+        const isRainy = day.weather === '雨';
+
+        // 予定(スケジュール)に基づくドレスコードのキーワードを取得
+        const targetSchedule = scheduleOptions.find(s => s.name === day.schedule) || scheduleOptions[3];
+        const styleKeywords = targetSchedule.keywords;
+
+        // アイテムのドレスコードマッチ度をスコアリングする関数
+        const getStyleScore = (item) => {
+          let score = 0;
+          styleKeywords.forEach(kw => {
+            if (item.title.includes(kw) || item.subCategory.includes(kw) || item.category.includes(kw)) {
+              score += 2; // キーワードに合致すれば高スコア
+            }
+          });
+          return score;
+        };
+
+        // スコア順にソートして一番高いものを優先的に選ぶ関数
+        const pickBestItem = (pool) => {
+          if (pool.length === 0) return null;
+          // 各アイテムにスコアを付与
+          const scoredPool = pool.map(item => ({ ...item, score: getStyleScore(item) }));
+          // スコアの最大値を取得
+          const maxScore = Math.max(...scoredPool.map(item => item.score));
+          // 最大スコアを持つアイテム（同点含む）を抽出
+          const topItems = scoredPool.filter(item => item.score === maxScore);
+          // その中からランダムに1つ選ぶ（毎回同じにならないようにするため）
+          return topItems[Math.floor(Math.random() * topItems.length)];
+        };
+
+        // 夏/暑い日の場合ワンピースを優先することがある（デートやフォーマルならさらに確率UP）
+        const isDressAppropriate = targetSchedule.id === 'date' || targetSchedule.id === 'formal';
+        if ((isHot || isDressAppropriate) && dresses.length > 0 && Math.random() > (isDressAppropriate ? 0.2 : 0.5)) {
+          selectedTops = pickBestItem(dresses);
+          selectedBottoms = null; // ボトムスは不要
+        } else {
+          // トップス選び
+          if (tops.length > 0) {
+            let filteredTops = tops;
+            if (isCold) filteredTops = tops.filter(t => t.season.includes('冬') || t.season.includes('秋冬') || t.title.includes('ニット'));
+            if (isHot) filteredTops = tops.filter(t => t.season.includes('夏') || t.title.includes('シャツ') || t.title.includes('リネン') || t.title.includes('Tシャツ'));
+            
+            // トレンド要素を確率で取り入れる
+            if (Math.random() > 0.6) {
+              const trendItems = filteredTops.filter(t => t.color.includes(trend.color) || t.title.includes(trend.keyword));
+              if (trendItems.length > 0) filteredTops = trendItems;
+            }
+
+            const pool = filteredTops.length > 0 ? filteredTops : tops;
+            selectedTops = pickBestItem(pool);
+          }
+          // ボトムス選び
+          if (bottoms.length > 0) {
+            let filteredBottoms = bottoms;
+            
+            // 【天気の考慮】雨の日は白いボトムスを避ける（泥はね対策）
+            if (isRainy) {
+              const notWhite = bottoms.filter(b => !b.color.includes('ホワイト') && !b.color.includes('白'));
+              if (notWhite.length > 0) filteredBottoms = notWhite;
+            }
+            
+            const pool = filteredBottoms.length > 0 ? filteredBottoms : bottoms;
+            selectedBottoms = pickBestItem(pool);
+          }
+        }
+
+        // アウター選び
+        if (outers.length > 0 && (isCold || (!isHot && Math.random() > 0.5) || targetSchedule.id === 'office' || targetSchedule.id === 'formal')) {
+          let filteredOuters = outers;
+          if (isCold) filteredOuters = outers.filter(o => o.title.includes('コート') || o.title.includes('レザージャケット'));
+          
+          // 【天気の考慮】雨の日はマウンテンパーカー等があれば優先
+          if (isRainy) {
+            const rainOuters = outers.filter(o => o.title.includes('マウンテンパーカー') || o.title.includes('ナイロン') || o.title.includes('ジャケット'));
+            if (rainOuters.length > 0) filteredOuters = rainOuters;
+          }
+          
+          const pool = filteredOuters.length > 0 ? filteredOuters : outers;
+          selectedOuter = pickBestItem(pool);
+        }
+
+        // シューズ選び
+        if (shoes.length > 0) {
+          let filteredShoes = shoes;
+          // 【天気の考慮】雨の日は汚れが目立ちにくい濃い色の靴を優先
+          if (isRainy) {
+             const darkShoes = shoes.filter(s => ['ブラック', 'ネイビー', 'ブラウン', '黒', '茶'].some(color => s.color.includes(color)));
+             if (darkShoes.length > 0) filteredShoes = darkShoes;
+          }
+          const pool = filteredShoes.length > 0 ? filteredShoes : shoes;
+          selectedShoes = pickBestItem(pool);
+        }
+
+        return {
+          ...day,
+          items: {
+            tops: selectedTops ? selectedTops.id : day.items.tops,
+            bottoms: selectedBottoms ? selectedBottoms.id : day.items.bottoms,
+            outer: selectedOuter ? selectedOuter.id : day.items.outer,
+            shoes: selectedShoes ? selectedShoes.id : day.items.shoes,
+          }
+        };
+      });
+
+      setWeeks(updatedWeeks);
+      setIsGenerating(false);
+    }, isInitial ? 0 : 1200); // 演出のため少し待機時間を長く
+  };
+
+  // 地域変更ハンドラー：選んだ地域のベース気温に合わせて1週間の天気をモック生成
+  const handleRegionChange = (regionId) => {
+    setSelectedRegion(regionId);
+    const region = regions.find(r => r.id === regionId);
+    
+    // 天気のモックパターン (晴れと曇りが出やすいように調整)
+    const weathersPattern = ['晴れ', '晴れ', '曇り', '曇り', '雨'];
+    
+    const newWeeks = weeks.map(day => {
+      const randomWeather = weathersPattern[Math.floor(Math.random() * weathersPattern.length)];
+      // 地域ごとのベース気温に対して、-4℃ 〜 +4℃ のランダムなブレを作成
+      const tempOffset = Math.floor(Math.random() * 9) - 4; 
+      const currentTemp = region.baseTemp + tempOffset;
+      
+      let tempDesc = '普通';
+      if (currentTemp >= 28) tempDesc = '猛暑';
+      else if (currentTemp >= 25) tempDesc = '暑い';
+      else if (currentTemp >= 20) tempDesc = '快適';
+      else if (currentTemp >= 15) tempDesc = '普通';
+      else if (currentTemp >= 10) tempDesc = '肌寒い';
+      else tempDesc = '寒い';
+
+      return {
+        ...day,
+        weather: randomWeather,
+        temp: `${tempDesc}(${currentTemp}℃)`
+      };
+    });
+    
+    setWeeks(newWeeks);
+  };
+
+  // 新しい服をクローゼットに追加
+  const handleAddCloth = (e) => {
+    e.preventDefault();
+    if (!newTitle.trim()) {
+      setFormError('アイテム名を入力してください。');
+      return;
+    }
+
+    // 画像が空の場合は、Unsplashのプレースホルダからランダムに設定
+    const finalUrl = imagePreview || newUrl.trim() || placeholderImages[Math.floor(Math.random() * placeholderImages.length)];
+
+    const newCloth = {
+      id: Date.now(),
+      title: newTitle,
+      category: newCategory,
+      season: newSeason,
+      color: newColor,
+      url: finalUrl,
+      subCategory: 'その他'
+    };
+
+    setCloset([newCloth, ...closet]);
+    
+    // フォームリセット
+    setNewTitle('');
+    setNewUrl('');
+    setImagePreview('');
+    setFormError('');
+    setIsAddModalOpen(false);
+  };
+
+  // ローカル画像のアップロード処理
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setImagePreview(imageUrl);
+      setNewUrl(''); // URL入力をクリア
+      
+      // AI自動タグ付けのシミュレーション（画像から特徴を抽出する演出）
+      setIsAnalyzing(true);
+      setTimeout(() => {
+        const mockCategories = ['トップス', 'ボトムス', 'アウター', 'ワンピース'];
+        const mockColors = ['ブラック', 'ホワイト', 'ネイビー', 'ベージュ', 'グレー', 'レッド', 'ブルー'];
+        const mockSeasons = ['春', '夏', '秋', '冬', 'オールシーズン'];
+        
+        const guessedCategory = mockCategories[Math.floor(Math.random() * mockCategories.length)];
+        const guessedColor = mockColors[Math.floor(Math.random() * mockColors.length)];
+        
+        setNewCategory(guessedCategory);
+        setNewColor(guessedColor);
+        setNewSeason(mockSeasons[Math.floor(Math.random() * mockSeasons.length)]);
+        setNewTitle(`${guessedColor}の${guessedCategory}`);
+        
+        setIsAnalyzing(false);
+      }, 1500); // 1.5秒間解析のアニメーションを表示
+    }
+  };
+
+  // ランダムな服をワンクリックで追加する（検証用のお助け機能）
+  const handleAddRandomCloth = () => {
+    const titles = {
+      'トップス': ['ロゴTシャツ', 'ボーダーカットソー', 'シルクブラウス', 'パーカー'],
+      'ボトムス': ['スラックス', 'カーゴパンツ', 'ミニスカート', 'ワイドパンツ'],
+      'アウター': ['マウンテンパーカー', 'カーディガン', 'デニムジャケット', 'ダウンベスト'],
+      'ワンピース': ['サマードレス', 'シャツワンピース', 'キャミワンピース'],
+      'シューズ': ['レザーローファー', 'スポーツスニーカー', 'ショートブーツ', 'サンダル']
+    };
+
+    const colors = ['ブラック', 'ホワイト', 'グレー', 'カーキ', 'ベージュ', 'ピンク', 'サックスブルー'];
+    const randomCategory = categories[Math.floor(Math.random() * (categories.length - 1)) + 1]; // 「すべて」を除く
+    const randomTitlePool = titles[randomCategory] || ['オシャレなアイテム'];
+    const randomTitle = randomTitlePool[Math.floor(Math.random() * randomTitlePool.length)];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const randomSeason = seasons[Math.floor(Math.random() * (seasons.length - 2)) + 1]; // 「すべて」「オールシーズン」を除く
+    const randomPic = placeholderImages[Math.floor(Math.random() * placeholderImages.length)];
+
+    const newCloth = {
+      id: Date.now(),
+      title: `${randomColor}の${randomTitle}`,
+      category: randomCategory,
+      season: randomSeason,
+      color: randomColor,
+      url: randomPic,
+      subCategory: '自動生成'
+    };
+
+    setCloset([newCloth, ...closet]);
+  };
+
+  // クローゼットから服を削除
+  const handleDeleteCloth = (id) => {
+    if (confirm('このアイテムをクローゼットから削除しますか？（1週間のコーディネートからも消去されます）')) {
+      setCloset(closet.filter(item => item.id !== id));
+      // 各曜日のアイテムスロットからも削除
+      setWeeks(weeks.map(day => {
+        const items = { ...day.items };
+        Object.keys(items).forEach(key => {
+          if (items[key] === id) {
+            items[key] = null;
+          }
+        });
+        return { ...day, items };
+      }));
+    }
+  };
+
+  // 曜日スロットをクリックして手動選択モーダルを開く
+  const handleOpenSlotSelect = (dayId, itemType) => {
+    setSelectedSlot({ dayId, itemType });
+    setIsSlotSelectModalOpen(true);
+  };
+
+  // 手動でスロットの服を入れ替える
+  const handleSelectClothForSlot = (clothId) => {
+    if (!selectedSlot) return;
+    const { dayId, itemType } = selectedSlot;
+
+    setWeeks(weeks.map(day => {
+      if (day.id === dayId) {
+        return {
+          ...day,
+          items: {
+            ...day.items,
+            [itemType]: clothId // 選択された服のIDをセット（nullなら解除）
+          }
+        };
+      }
+      return day;
+    }));
+
+    setIsSlotSelectModalOpen(false);
+    setSelectedSlot(null);
+  };
+
+  // 曜日データの属性変更（天気や予定）
+  const handleDayAttributeChange = (dayId, field, value) => {
+    setWeeks(weeks.map(day => {
+      if (day.id === dayId) {
+        // スケジュールが変更されたら、連動してスタイル（ドレスコード）も更新する
+        if (field === 'schedule') {
+          const selectedSchedule = scheduleOptions.find(s => s.name === value);
+          return { 
+            ...day, 
+            schedule: value, 
+            style: selectedSchedule ? selectedSchedule.style : day.style 
+          };
+        }
+        return { ...day, [field]: value };
+      }
+      return day;
+    }));
+  };
+
+  // クローゼットの絞り込み
+  const filteredCloset = closet.filter(item => {
+    const matchCategory = selectedCategory === 'すべて' || item.category === selectedCategory;
+    const matchSeason = selectedSeason === 'すべて' || item.season === selectedSeason || item.season === 'オールシーズン';
+    const matchSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        item.color.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        item.category.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCategory && matchSeason && matchSearch;
+  });
+
+  // 指定のIDの衣類オブジェクトを取得するヘルパー
+  const getClothById = (id) => closet.find(item => item.id === id);
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans pb-12 selection:bg-indigo-500 selection:text-white">
+      {/* ヒーローヘッダー */}
+      <header className="relative overflow-hidden bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 border-b border-indigo-500/30 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(99,102,241,0.15),transparent)] pointer-events-none"></div>
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="px-3 py-1 text-xs font-semibold bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 rounded-full flex items-center gap-1">
+                <Sparkles size={12} /> AIコーディネーター搭載
+              </span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-purple-200">
+              スマート AI クローゼット
+            </h1>
+            <p className="text-slate-300 mt-2 text-sm sm:text-base max-w-xl">
+              お気に入りの服を登録し、天気やスケジュールに応じた1週間のコーディネートをAI機能で自動シミュレーション。毎朝の迷う時間をゼロに。
+            </p>
+
+            {/* 地域選択UI */}
+            <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-2 w-max shadow-inner">
+                <MapPin size={16} className="text-indigo-400" />
+                <span className="text-xs text-slate-400 font-medium">地域設定:</span>
+                <select 
+                  value={selectedRegion}
+                  onChange={(e) => handleRegionChange(e.target.value)}
+                  className="bg-transparent text-sm font-bold text-slate-200 focus:outline-none cursor-pointer appearance-none pr-2"
+                >
+                  {regions.map(r => (
+                    <option key={r.id} value={r.id} className="bg-slate-800 text-slate-200">{r.name}</option>
+                  ))}
+                </select>
+              </div>
+              <span className="text-xs text-slate-500 flex items-center gap-1">
+                <Info size={12}/> 地域を変更するとカレンダーの天気が更新されます
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => handleAutoGenerate(false)}
+              disabled={isGenerating}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all active:scale-95 disabled:opacity-50"
+            >
+              <Sparkles size={18} className={isGenerating ? 'animate-spin' : ''} />
+              {isGenerating ? 'コーディネート生成中...' : '1週間コーデを自動生成'}
+            </button>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold text-slate-200 transition-all active:scale-95"
+            >
+              <Plus size={18} />
+              服を追加する
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ナビゲーションタブ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <div className="bg-slate-800/80 backdrop-blur-md p-1.5 rounded-2xl flex border border-slate-700/60 max-w-md">
+          <button
+            onClick={() => setActiveTab('weekly')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${
+              activeTab === 'weekly' 
+                ? 'bg-slate-700 text-white shadow-md' 
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Calendar size={18} />
+            1週間カレンダー
+          </button>
+          <button
+            onClick={() => setActiveTab('closet')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${
+              activeTab === 'closet' 
+                ? 'bg-slate-700 text-white shadow-md' 
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Shirt size={18} />
+            マイクローゼット ({closet.length})
+          </button>
+        </div>
+      </div>
+
+      {/* メインコンテンツ */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* TAB 1: 1週間コーディネートビュー */}
+        {activeTab === 'weekly' && (
+          <div className="space-y-8">
+            
+            {/* トレンドアドバイスパネル */}
+            {trendAdvice && (
+              <div className="bg-gradient-to-r from-fuchsia-900/40 via-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start gap-4 shadow-lg shadow-purple-900/20">
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl shadow-inner shrink-0">
+                  <Sparkles size={24} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-purple-200 text-lg flex items-center gap-2">
+                    AI ファッション・アドバイザー
+                  </h3>
+                  <p className="text-slate-300 text-sm mt-2 leading-relaxed">
+                    {trendAdvice}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-300 text-xs font-medium">
+                      <Umbrella size={12} />
+                      雨天時は泥はねしにくい服を選択
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium">
+                      <Thermometer size={12} />
+                      気温に合わせた素材感を自動調整
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-pink-500/10 border border-pink-500/20 text-pink-300 text-xs font-medium">
+                      <Briefcase size={12} />
+                      予定に応じたドレスコード判定
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* カレンダー概要 */}
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+                  <Info size={20} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-200 text-base">コーディネートの編集方法</h3>
+                  <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                    各曜日のコーディネートスロット（トップス、ボトムスなど）をクリックすると、いつでもクローゼットの服と交換できます。天気や予定も曜日ごとに直接変更可能です。
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 w-full md:w-auto">
+                <button 
+                  onClick={() => {
+                    if (confirm('すべての曜日のコーディネートをクリアしますか？')) {
+                      setWeeks(weeks.map(w => ({ ...w, items: { tops: null, bottoms: null, outer: null, shoes: null } })));
+                    }
+                  }}
+                  className="px-4 py-2 text-xs bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 rounded-lg flex-1 md:flex-none text-center"
+                >
+                  コーディネートをリセット
+                </button>
+              </div>
+            </div>
+
+            {/* 1週間スケジュールカードグリッド */}
+            <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+              {weeks.map((day) => {
+                const dayTops = getClothById(day.items.tops);
+                const dayBottoms = getClothById(day.items.bottoms);
+                const dayOuter = getClothById(day.items.outer);
+                const dayShoes = getClothById(day.items.shoes);
+
+                const hasAnyItem = dayTops || dayBottoms || dayOuter || dayShoes;
+
+                return (
+                  <div 
+                    key={day.id} 
+                    className="bg-slate-800/70 border border-slate-700/80 rounded-2xl overflow-hidden flex flex-col hover:border-indigo-500/30 hover:shadow-lg transition-all"
+                  >
+                    {/* 曜日ヘッダー */}
+                    <div className="bg-slate-800 p-4 border-b border-slate-700/80">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-lg text-indigo-300">{day.name}</span>
+                        {/* 天気アイコンセレクター */}
+                        <div className="flex items-center gap-1.5">
+                          <button 
+                            onClick={() => {
+                              const weathers = ['晴れ', '曇り', '雨'];
+                              const nextIdx = (weathers.indexOf(day.weather) + 1) % weathers.length;
+                              handleDayAttributeChange(day.id, 'weather', weathers[nextIdx]);
+                            }}
+                            className="p-1 hover:bg-slate-700 rounded transition-colors"
+                            title="天気を切り替え"
+                          >
+                            {day.weather === '晴れ' && <Sun size={16} className="text-amber-400" />}
+                            {day.weather === '曇り' && <Cloud size={16} className="text-slate-400" />}
+                            {day.weather === '雨' && <CloudRain size={16} className="text-sky-400" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 気温・予定の入力/表示 */}
+                      <div className="mt-3 space-y-2">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                          <Thermometer size={14} className="text-slate-500 shrink-0" />
+                          <input 
+                            type="text" 
+                            value={day.temp} 
+                            onChange={(e) => handleDayAttributeChange(day.id, 'temp', e.target.value)}
+                            className="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-indigo-500 focus:outline-none w-full"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-400 relative group">
+                          {scheduleOptions.find(s => s.name === day.schedule)?.icon || <Briefcase size={14} className="text-slate-500 shrink-0" />}
+                          <select 
+                            value={day.schedule} 
+                            onChange={(e) => handleDayAttributeChange(day.id, 'schedule', e.target.value)}
+                            className="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-indigo-500 focus:outline-none w-full font-medium text-slate-300 appearance-none cursor-pointer pr-4"
+                          >
+                            {scheduleOptions.map(opt => (
+                              <option key={opt.id} value={opt.name} className="bg-slate-800">{opt.name}</option>
+                            ))}
+                          </select>
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 group-hover:opacity-100">
+                            <ChevronRight size={12} className="rotate-90" />
+                          </div>
+                        </div>
+                        
+                        {/* ドレスコードバッジ */}
+                        <div className="flex items-center pt-1">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-300 border border-slate-600/50 flex items-center gap-1 font-medium">
+                            👗 {day.style}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* コーディネートスロット一覧 */}
+                    <div className="p-3 flex-1 space-y-3 bg-slate-900/30">
+                      
+                      {/* アウタースロット */}
+                      <div 
+                        onClick={() => handleOpenSlotSelect(day.id, 'outer')}
+                        className={`group relative rounded-xl border border-dashed aspect-[4/3] flex flex-col items-center justify-center overflow-hidden cursor-pointer transition-all ${
+                          dayOuter 
+                            ? 'border-transparent bg-slate-800' 
+                            : 'border-slate-700 hover:border-indigo-400/50 bg-slate-800/20 hover:bg-slate-800/40'
+                        }`}
+                      >
+                        {dayOuter ? (
+                          <>
+                            <img src={dayOuter.url} alt={dayOuter.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                              <span className="text-[10px] bg-indigo-500 px-1.5 py-0.5 rounded text-white self-start mb-1">アウター</span>
+                              <span className="text-xs text-slate-100 font-medium truncate">{dayOuter.title}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center p-2">
+                            <Plus size={16} className="mx-auto text-slate-500 group-hover:text-indigo-400" />
+                            <span className="text-[10px] text-slate-500 group-hover:text-indigo-400 mt-1 block">アウター</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* トップススロット */}
+                      <div 
+                        onClick={() => handleOpenSlotSelect(day.id, 'tops')}
+                        className={`group relative rounded-xl border border-dashed aspect-[4/3] flex flex-col items-center justify-center overflow-hidden cursor-pointer transition-all ${
+                          dayTops 
+                            ? 'border-transparent bg-slate-800' 
+                            : 'border-slate-700 hover:border-indigo-400/50 bg-slate-800/20 hover:bg-slate-800/40'
+                        }`}
+                      >
+                        {dayTops ? (
+                          <>
+                            <img src={dayTops.url} alt={dayTops.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                              <span className="text-[10px] bg-pink-500 px-1.5 py-0.5 rounded text-white self-start mb-1">トップス</span>
+                              <span className="text-xs text-slate-100 font-medium truncate">{dayTops.title}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center p-2">
+                            <Plus size={16} className="mx-auto text-slate-500 group-hover:text-indigo-400" />
+                            <span className="text-[10px] text-slate-500 group-hover:text-indigo-400 mt-1 block">トップス</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ボトムススロット */}
+                      <div 
+                        onClick={() => handleOpenSlotSelect(day.id, 'bottoms')}
+                        className={`group relative rounded-xl border border-dashed aspect-[4/3] flex flex-col items-center justify-center overflow-hidden cursor-pointer transition-all ${
+                          dayBottoms 
+                            ? 'border-transparent bg-slate-800' 
+                            : 'border-slate-700 hover:border-indigo-400/50 bg-slate-800/20 hover:bg-slate-800/40'
+                        }`}
+                      >
+                        {dayBottoms ? (
+                          <>
+                            <img src={dayBottoms.url} alt={dayBottoms.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                              <span className="text-[10px] bg-teal-500 px-1.5 py-0.5 rounded text-white self-start mb-1">ボトムス</span>
+                              <span className="text-xs text-slate-100 font-medium truncate">{dayBottoms.title}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center p-2">
+                            <Plus size={16} className="mx-auto text-slate-500 group-hover:text-indigo-400" />
+                            <span className="text-[10px] text-slate-500 group-hover:text-indigo-400 mt-1 block">ボトムス</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* シューズスロット */}
+                      <div 
+                        onClick={() => handleOpenSlotSelect(day.id, 'shoes')}
+                        className={`group relative rounded-xl border border-dashed aspect-[4/3] flex flex-col items-center justify-center overflow-hidden cursor-pointer transition-all ${
+                          dayShoes 
+                            ? 'border-transparent bg-slate-800' 
+                            : 'border-slate-700 hover:border-indigo-400/50 bg-slate-800/20 hover:bg-slate-800/40'
+                        }`}
+                      >
+                        {dayShoes ? (
+                          <>
+                            <img src={dayShoes.url} alt={dayShoes.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                              <span className="text-[10px] bg-amber-500 px-1.5 py-0.5 rounded text-white self-start mb-1">シューズ</span>
+                              <span className="text-xs text-slate-100 font-medium truncate">{dayShoes.title}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center p-2">
+                            <Plus size={16} className="mx-auto text-slate-500 group-hover:text-indigo-400" />
+                            <span className="text-[10px] text-slate-500 group-hover:text-indigo-400 mt-1 block">シューズ</span>
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: マイクローゼット管理 */}
+        {activeTab === 'closet' && (
+          <div className="space-y-6">
+            
+            {/* コントロールパネル：検索とフィルター */}
+            <div className="bg-slate-800/80 border border-slate-700/60 p-6 rounded-2xl shadow-xl flex flex-col gap-6">
+              
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                {/* 検索入力 */}
+                <div className="relative flex-1">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Search size={18} />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="服の名称、カラーなどで検索..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="block w-full pl-10 pr-4 py-3 bg-slate-900/80 border border-slate-700 rounded-xl leading-5 text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  />
+                </div>
+
+                {/* クイック機能ボタン */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleAddRandomCloth}
+                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-xl text-sm font-medium transition-colors"
+                    title="検証用のダミーのおしゃれ服をクローゼットに1着追加します"
+                  >
+                    <Sparkles size={16} />
+                    ランダム服を追加
+                  </button>
+                  <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all shadow-md shadow-indigo-600/10"
+                  >
+                    <Plus size={16} />
+                    手動で服を追加
+                  </button>
+                </div>
+              </div>
+
+              {/* フィルターグループ */}
+              <div className="border-t border-slate-700/50 pt-4 space-y-3">
+                {/* カテゴリフィルター */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  <span className="text-xs text-slate-400 font-medium flex-shrink-0 mr-1 flex items-center gap-1">
+                    <Filter size={12} /> カテゴリ:
+                  </span>
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        selectedCategory === cat
+                          ? 'bg-indigo-500 text-white'
+                          : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 季節フィルター */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  <span className="text-xs text-slate-400 font-medium flex-shrink-0 mr-1 flex items-center gap-1">
+                    <Calendar size={12} /> 季節別:
+                  </span>
+                  {seasons.map(seas => (
+                    <button
+                      key={seas}
+                      onClick={() => setSelectedSeason(seas)}
+                      className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        selectedSeason === seas
+                          ? 'bg-indigo-500 text-white'
+                          : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                      }`}
+                    >
+                      {seas}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* クローゼット衣類一覧 */}
+            {filteredCloset.length === 0 ? (
+              <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl py-16 text-center text-slate-500">
+                <Shirt size={48} className="mx-auto mb-4 opacity-20" />
+                <p className="text-lg font-medium text-slate-400">該当する衣服が見つかりません</p>
+                <p className="text-sm text-slate-500 mt-1">検索ワードを変えるか、新しく服をクローゼットに追加してください。</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
+                {filteredCloset.map((item) => (
+                  <div 
+                    key={item.id}
+                    className="group bg-slate-850 border border-slate-700/80 rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:border-indigo-500/40 transition-all duration-300 flex flex-col relative"
+                  >
+                    {/* 画像コンテナ */}
+                    <div className="aspect-[3/4] overflow-hidden relative bg-slate-900">
+                      <img 
+                        src={item.url} 
+                        alt={item.title} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      {/* 削除ボタン */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCloth(item.id);
+                        }}
+                        className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/80 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                        title="クローゼットから削除"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+
+                      {/* 季節タグ */}
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 text-[10px] bg-slate-900/80 backdrop-blur-md rounded text-slate-300 font-medium border border-slate-700">
+                        {item.season}
+                      </span>
+                    </div>
+
+                    {/* 衣類詳細 */}
+                    <div className="p-3.5 flex-1 flex flex-col justify-between bg-slate-800/40">
+                      <div>
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">{item.category}</span>
+                          <span className="text-[10px] text-slate-400">{item.color}</span>
+                        </div>
+                        <h4 className="text-sm font-semibold text-slate-200 line-clamp-2 leading-snug">
+                          {item.title}
+                        </h4>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+        )}
+
+      </main>
+
+      {/* モーダル 1: 服の手動追加モーダル */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="absolute inset-0" onClick={() => setIsAddModalOpen(false)}></div>
+          
+          <div className="relative z-10 w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 bg-slate-800 border-b border-slate-700/60 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <Shirt size={18} className="text-indigo-400" />
+                クローゼットに服を登録
+              </h3>
+              <button 
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCloth} className="p-6 space-y-4">
+              {formError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400">
+                  {formError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">アイテム名 (必須)</label>
+                <input
+                  type="text"
+                  placeholder="例：黒のオーバーサイズスウェット"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-750 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">カテゴリ</label>
+                  <select
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-750 rounded-xl px-3 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    {categories.filter(c => c !== 'すべて').map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">着用シーズン</label>
+                  <select
+                    value={newSeason}
+                    onChange={(e) => setNewSeason(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-750 rounded-xl px-3 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="オールシーズン">オールシーズン</option>
+                    <option value="春">春用</option>
+                    <option value="夏">夏用</option>
+                    <option value="秋">秋用</option>
+                    <option value="冬">冬用</option>
+                    <option value="春秋">春秋用</option>
+                    <option value="秋冬">秋冬用</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">ベースカラー</label>
+                  <input
+                    type="text"
+                    placeholder="例：ネイビー、ホワイト"
+                    value={newColor}
+                    onChange={(e) => setNewColor(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-750 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* 画像アップロード領域 */}
+              <div className="mt-4">
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">服の画像</label>
+                <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-slate-700 border-dashed rounded-xl cursor-pointer bg-slate-800/50 hover:bg-slate-800 transition-colors relative overflow-hidden">
+                    {imagePreview || newUrl ? (
+                      <div className="relative w-full h-full bg-slate-900 flex items-center justify-center">
+                        <img src={imagePreview || newUrl} alt="Preview" className="absolute inset-0 w-full h-full object-contain p-2" />
+                        
+                        {isAnalyzing ? (
+                          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-indigo-400">
+                            <RefreshCw className="w-8 h-8 mb-2 animate-spin" />
+                            <span className="text-xs font-bold animate-pulse">AIがアイテムを解析中...</span>
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-white text-sm font-medium flex items-center gap-2"><UploadCloud size={16}/> 変更する</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <UploadCloud className="w-8 h-8 mb-2 text-slate-400" />
+                        <p className="mb-2 text-sm text-slate-400"><span className="font-semibold text-indigo-400">クリックしてアップロード</span></p>
+                        <p className="text-xs text-slate-500">またはドラッグ＆ドロップ (PNG, JPG)</p>
+                      </div>
+                    )}
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={isAnalyzing}
+                    />
+                  </label>
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-xs text-slate-500 whitespace-nowrap">または画像URL:</span>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={newUrl}
+                    onChange={(e) => { setNewUrl(e.target.value); setImagePreview(''); }}
+                    className="flex-1 bg-slate-800 border border-slate-750 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-800 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all shadow-md"
+                >
+                  登録する
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* モーダル 2: スロットアイテム手動選定モーダル */}
+      {isSlotSelectModalOpen && selectedSlot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="absolute inset-0" onClick={() => { setIsSlotSelectModalOpen(false); setSelectedSlot(null); }}></div>
+          
+          <div className="relative z-10 w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="px-6 py-4 bg-slate-800 border-b border-slate-700/60 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h3 className="text-base font-bold text-slate-100">
+                  {weeks.find(w => w.id === selectedSlot.dayId)?.name} の {selectedSlot.itemType === 'tops' ? 'トップス' : selectedSlot.itemType === 'bottoms' ? 'ボトムス' : selectedSlot.itemType === 'outer' ? 'アウター' : 'シューズ'} を変更
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">クローゼットからセットする衣類を選んでください</p>
+              </div>
+              <button 
+                onClick={() => { setIsSlotSelectModalOpen(false); setSelectedSlot(null); }}
+                className="text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* クローゼットからのセレクター領域 */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {/* 解除ボタン */}
+              <button
+                onClick={() => handleSelectClothForSlot(null)}
+                className="w-full py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 size={16} />
+                このスロットの衣類を外す（空にする）
+              </button>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {/* 該当スロットのカテゴリに対応する服だけを表示 */}
+                {closet
+                  .filter(item => {
+                    // 基本的なカテの一致（tops -> トップス, bottoms -> ボトムス, outer -> アウター, shoes -> シューズ）
+                    // ワンピースはトップスまたはボトムススロット両方にセット可能として扱う
+                    if (selectedSlot.itemType === 'tops') return item.category === 'トップス' || item.category === 'ワンピース';
+                    if (selectedSlot.itemType === 'bottoms') return item.category === 'ボトムス';
+                    if (selectedSlot.itemType === 'outer') return item.category === 'アウター';
+                    if (selectedSlot.itemType === 'shoes') return item.category === 'シューズ';
+                    return true;
+                  })
+                  .map(item => (
+                    <div 
+                      key={item.id}
+                      onClick={() => handleSelectClothForSlot(item.id)}
+                      className="group bg-slate-800 border border-slate-700 rounded-xl overflow-hidden cursor-pointer hover:border-indigo-500 hover:shadow-lg transition-all flex flex-col relative"
+                    >
+                      <div className="aspect-[4/3] bg-slate-900 overflow-hidden">
+                        <img src={item.url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      </div>
+                      <div className="p-3">
+                        <span className="text-[9px] text-indigo-400 font-bold uppercase block mb-0.5">{item.category}</span>
+                        <h4 className="text-xs font-semibold text-slate-200 truncate">{item.title}</h4>
+                        <div className="flex gap-1 mt-1">
+                          <span className="text-[9px] px-1 bg-slate-700 rounded text-slate-300">{item.season}</span>
+                          <span className="text-[9px] px-1 bg-slate-700 rounded text-slate-300">{item.color}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 生成中バックドロップ */}
+      {isGenerating && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center">
+          <div className="relative">
+            <div className="h-20 w-20 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 animate-spin"></div>
+            <Sparkles size={32} className="absolute inset-0 m-auto text-indigo-400 animate-pulse" />
+          </div>
+          <h3 className="mt-6 text-xl font-bold text-slate-200">AIが最適なコーディネートを構築中...</h3>
+          <p className="mt-2 text-sm text-slate-400">クローゼット内のアイテム、気温、予定を分析しています</p>
+        </div>
+      )}
+    </div>
+  );
+}
